@@ -1,0 +1,3 @@
+/Users/teto/Documents/Cours M1 MIAGE/reseau/CSocket/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/teto/Documents/Cours M1 MIAGE/reseau/CSocket/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/teto/Documents/Cours M1 MIAGE/reseau/CSocket/cmake-build-debug/CMakeFiles/CSocket.dir
