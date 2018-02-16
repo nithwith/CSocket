@@ -97,8 +97,6 @@ void *lobby(void *socket_desc) {
   printf("Player %s connected to the game\n", client_message);
   message = malloc(sizeof(char) * strlen("Bienvenue sur CJanken !") + 200);
   strcpy(message, "Bienvenue sur CJanken !");
-  // message = "Bienvenue sur CJanken !";
-  // message = realloc(sizeof(char) * strlen("Bienvenue sur CJanken !") + 200);
   strcat(message, client_message);
   write(sock , message , strlen(message));
   message = "1: Join Room (soon free places)\n2: create Room\n3: Exit";
