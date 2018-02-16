@@ -42,9 +42,7 @@ int main(int argc , char *argv[])
   while (1) {
     if (recv(sock , server_reply , sizeof(server_reply), 0) < 0) {
       printf("Receive failed");
-      
     }
-
     printf("%s\n", server_reply);
   }
   close(sock);
