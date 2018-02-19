@@ -183,10 +183,15 @@ void *connection_handler(void *client)
           free(temp);
         }
         break;
+
+        //CLOSE GAME
         case 3:
+
+        strcat(push, "10");
+        write(cli->connfd, push , strlen(push));
+
         bool = 1;
         DelClient(cli->uid);
-        // close(cli->connfd);
         break;
         default:
         bool = 0;
@@ -370,19 +375,23 @@ void *gameIA(void *client)
     if ((recv(cli->connfd, client_message , 10 , 0)) > 0 ) {
       choice = atoi(client_message);
       if(choice == 1 || choice == 2) {
+
+        strcat(push,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+        write(cli->connfd , push , strlen(push));
+        
         switch (choice) {
           case 1:
-          bool = 1;
-          *connection_handler(cli);
-          return NULL;
-          break;
+            bool = 1;
+            *connection_handler(cli);
+            return NULL;
+            break;
           case 2:
-          bool = 1;
-          gameIA(cli);
-          return NULL;
-          break;
+            bool = 1;
+            gameIA(cli);
+            return NULL;
+            break;
           default:
-          write(cli->connfd, "Mauvais choix, rééssayez: \n", strlen("Mauvais choix, rééssayez: \n"));
+            write(cli->connfd, "Mauvais choix, rééssayez: \n", strlen("Mauvais choix, rééssayez: \n"));
         }
       } else {
         write(cli->connfd, "Mauvais choix, rééssayez: \n", strlen("Mauvais choix, rééssayez: \n"));
