@@ -73,6 +73,16 @@ int main(int argc , char *argv[])
           break;
       }
 
+      //Attente d'un second message pour annoncer l'arrivée d'un nouveau joueur
+      //Ne marche pas
+      if(&server_reply[0] == "En attente d'un 2eme joueur"){
+        if( recv(sock , server_reply , 2000 , 0) < 0)
+        {
+            puts("recv failed");
+            break;
+        }
+      }
+
       //SIGNAL CLOSE
       int choice = atoi(server_reply);
       if(choice == 10){

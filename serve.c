@@ -250,10 +250,7 @@ void *gameMulti(void *r) {
   int game, win1= 0, win2= 0, tie= 0, lose1= 0, lose2= 0, read_size, res1, res2;
   clientOn *cli1 = room->cli1;
   clientOn *cli2 = room->cli2;
-  strcat(multi_push, "------ [MODE MULTI] ------\n");
-  write(cli1->connfd, multi_push, strlen(multi_push));
-  write(cli2->connfd, multi_push, strlen(multi_push));
-  snprintf(multi_push, sizeof(multi_push), "Joueur %d VERSUS Joueur %d\n", cli1->uid, cli2->uid);
+  snprintf(multi_push, sizeof(multi_push), "------ [MODE MULTI] ------\nJoueur %d VERSUS Joueur %d\n", cli1->uid, cli2->uid);
   write(cli1->connfd, multi_push, strlen(multi_push));
   write(cli2->connfd, multi_push, strlen(multi_push));
   memset(multi_push, 0, sizeof multi_push);
