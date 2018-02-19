@@ -150,7 +150,6 @@ void *connection_handler(void *client)
         case 2:
         bool = 1;
         nbInqueue++;
-        printf("nbbqueueueu %d\n", nbInqueue);
         AddToQueue(cli->uid);
         if (nbInqueue == 2) {
           nbInqueue = 0;
@@ -176,19 +175,23 @@ void *connection_handler(void *client)
           printf("Création d'une room\n" );
           Room *temp;
           printf("avant malloc\n" );
-          temp = malloc(sizeof(Room));
+          temp = malloc(sizeof(Room*));
           printf("apres malloc\n" );
           temp->open = 1;
+          printf("apres malloc\n" );
           temp->cli1 = cli;
+          printf("apres malloc\n" );
           cli->currRoom = temp;
+          printf("apres malloc\n" );
           while(1) {
             if (((Room*)cli->currRoom)->cli2 != 0) {
+
+              printf("apres malloc\n" );
               //Lancement du jeu multi
               gameMulti(cli->currRoom);
               return 0;
             }
           }
-          free(temp);
         }
         break;
         case 3:
@@ -327,9 +330,16 @@ void *gameMulti(void *r) {
   write(cli2->connfd, multi_push, strlen(multi_push));
   delToqueue(cli1->uid);
   delToqueue(cli2->uid);
-  return 0;
-  //connection_handler(cli1);
-  //connection_handler(cli2);
+  if( pthread_create( &tid1 , NULL ,  connection_handler , (void*) cli1) < 0)
+  {
+    perror("could not create thread");
+    return 1;
+  }
+  if( pthread_create( &tid2 , NULL ,  connection_handler , (void*) cli2) < 0)
+  {
+    perror("could not create thread");
+    return 1;
+  }
 }
 
 
