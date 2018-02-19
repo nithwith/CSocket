@@ -32,6 +32,11 @@ typedef struct Roomer{
   //struct Roomer *YouCanOpenTheDoor;			/*  */
 } Room;
 
+struct arg_struct {
+    int choice;
+    int socket;
+};
+
 void *connection_handler(void *client);
 void *gameIA(void *client);
 void *createRoom(void *);
@@ -41,6 +46,7 @@ void AddClient(clientOn *c);//AJoute le client au groupe de client connecter
 void AddToQueue(int c);//AJoute le client au groupe de client en queue
 void DelClient(int);
 void delToqueue(int c);
+void *askChoice(void *client);
 //Initialise le tab de clients connectés
 clientOn *clients[10];
 int inQueue[10];
@@ -169,7 +175,9 @@ void *connection_handler(void *client)
           memset(push, 0 , sizeof push);
           printf("Création d'une room\n" );
           Room *temp;
+          printf("avant malloc\n" );
           temp = malloc(sizeof(Room));
+          printf("apres malloc\n" );
           temp->open = 1;
           temp->cli1 = cli;
           cli->currRoom = temp;
@@ -197,14 +205,41 @@ void *connection_handler(void *client)
   close(cli->connfd);
   //free(cli->connfd);
 }
+void *askChoice(void *client)
+{
+  char multi_push[255], message[1];
+  clientOn *cli = (clientOn*)client;
+  int bool = 0 , choice1;
+  strcat(multi_push,"Rentrez 1 pour Papier, 2 pour ciseaux, 3 pour pierre\n");
+  write(cli->connfd , multi_push , strlen(multi_push));
+  memset(multi_push, 0, sizeof multi_push);
+  while(bool == 0){
+    if ( recv(cli->connfd ,message , 10 , 0) > 0 ){
+      choice1 = atoi(message);
+      if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
+        strcat(multi_push,"En attente du jeu de l'autre joueur...\n");
+        write(cli->connfd , multi_push , strlen(multi_push));
+        memset(multi_push, 0, sizeof multi_push);
+        bool = 1;
+        return (void*) choice1;
+      } else {
+        strcat(multi_push,"Choix inconnu, rééssayez:\n");
+        write(cli->connfd , multi_push , strlen(multi_push));
+        memset(multi_push, 0, sizeof multi_push);
+      }
+    }
+  }
+}
 
 void *gameMulti(void *r) {
 
   const char Mooves[3][15]={"Papier","Ciseaux","Pierre"};
   pthread_t tid1, tid2;
+  void *choice1 = 0;
+  void *choice2 = 0;
   Room *room = (Room*)r;
-  char multi_push[255], message1[1], message2[1];
-  int game, win1, win2, tie, lose1, lose2, choice1, choice2, read_size, bool1 = 0, bool2 = 0;
+  char multi_push[500], message1[1], message2[1];
+  int game, win1= 0, win2= 0, tie= 0, lose1= 0, lose2= 0, read_size, res1, res2;
   clientOn *cli1 = room->cli1;
   clientOn *cli2 = room->cli2;
   strcat(multi_push, "------ [MODE MULTI] ------\n");
@@ -216,60 +251,91 @@ void *gameMulti(void *r) {
   memset(multi_push, 0, sizeof multi_push);
 
   for (game = 0; game < 3 ; game++) {
-    choice1 = 0;
-    choice2 = 0;
-    bool1 = 0;
-    bool2 = 0;
-    strcat(multi_push,"Rentrez 1 pour Papier, 2 pour ciseaux, 3 pour pierre\n");
+    pthread_create(&tid1, NULL, askChoice, cli1);
+    pthread_create(&tid2, NULL, askChoice, cli2);
+    pthread_join(tid1, &choice1);
+    pthread_join(tid2, &choice2);
+    printf("choice1 %d\n", (int)choice1);
+    printf("choice2 %d\n", (int)choice2);
+    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[((int)choice1) - 1]);
     write(cli1->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[((int)choice2) - 1]);
+    write(cli2->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[((int)choice2) - 1]);
+    write(cli1->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[((int)choice1) - 1]);
     write(cli2->connfd , multi_push , strlen(multi_push));
     memset(multi_push, 0, sizeof multi_push);
-    while(bool1 == 0 && bool2 == 0){
-      if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
-        choice1 = atoi(message1);
-        if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
-          printf("joeur 1 a joué %d\n", choice1);
-          bool1 = 1;
-        } else {
-          strcat(multi_push,"Choix inconnu, rééssayez:\n");
-          write(cli1->connfd , multi_push , strlen(multi_push));
-          memset(multi_push, 0, sizeof multi_push);
-        }
-      }
-      if ((read_size = recv(cli2->connfd ,message2 , 10 , 0)) > 0 ){
-        choice2 = atoi(message2);
-        if (choice2 == 1 || choice2 == 2 || choice2 == 3 ) {
-          printf("joeur 2 a joué %d\n", choice2);
-          bool2 = 1;
-        } else {
-          strcat(multi_push,"Choix inconnu, rééssayez:\n");
-          write(cli2->connfd , multi_push , strlen(multi_push));
-          memset(multi_push, 0, sizeof multi_push);
-        }
-      }
+
+    if(((int)choice1) == 1 && ((int)choice2)== 1){
+      strcat(multi_push, "Papier contre papier, égalité!\n");
+      tie++;
     }
-
-    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[choice1 - 1]);
+    else if(((int)choice1) ==1 && ((int)choice2)== 2){
+      snprintf(multi_push, sizeof(multi_push), " Papier contre ciseaux , le joueur %d l'emporte !\n",cli2->uid);
+      lose1++;win2++;
+    }
+    else if(((int)choice1) == 1 && ((int)choice2)== 3){
+      snprintf(multi_push, sizeof(multi_push), " Papier contre pierre , le joueur %d l'emporte !\n",cli1->uid);
+      win1++;lose2++;
+    }
+    else if(((int)choice1) == 2 && ((int)choice2) == 1){
+      snprintf(multi_push, sizeof(multi_push), " Ciseaux contre papier , le joueur %d l'emporte !\n",cli1->uid);
+      win1++;lose2++;
+    }
+    else if(((int)choice1) == 2 && ((int)choice2) == 2){
+      strcat(multi_push,"Ciseaux contre ciseaux, égalité!\n");
+      tie++;
+    }
+    else if(((int)choice1) == 2 && ((int)choice2) == 3){
+      snprintf(multi_push, sizeof(multi_push), " Ciseaux contre pierre , le joueur %d l'emporte !\n",cli2->uid);
+      lose1++;win2++;
+    }
+    else if(((int)choice1) == 3 && ((int)choice2)== 1){
+      snprintf(multi_push, sizeof(multi_push), " Pierre contre papier , le joueur %d l'emporte !\n",cli2->uid);
+      lose1++;win2++;
+    }
+    else if(((int)choice1) == 3 && ((int)choice2)== 2){
+      snprintf(multi_push, sizeof(multi_push), "Pierre contre ciseaux , le joueur %d l'emporte !\n",cli1->uid);
+      strcat(multi_push, "Pierre contre ciseaux, victoire !\n");
+      win1++;lose2++;
+    }
+    else if(((int)choice1) == 3 && ((int)choice2)== 3){
+      strcat(multi_push,"Pierre contre pierre, égalité!\n");
+      tie++;
+    }
     write(cli1->connfd , multi_push , strlen(multi_push));
-    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[choice2 - 1]);
-    write(cli2->connfd , multi_push , strlen(multi_push));
-    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[choice2 - 1]);
-    write(cli1->connfd , multi_push , strlen(multi_push));
-    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[choice1 - 1]);
     write(cli2->connfd , multi_push , strlen(multi_push));
     memset(multi_push, 0, sizeof multi_push);
-
   }
+
+  memset(multi_push, 0, sizeof multi_push);
+  res1 = win1 + tie - lose1;
+  res2 = win2 + tie - lose2;
+  if (res1 > res2) {
+    snprintf(multi_push, sizeof(multi_push), "Joueur %d a gagné le match!\n",cli1->uid);
+  } else if ( res2 > res1) {
+    snprintf(multi_push, sizeof(multi_push), "Joueur %d a gagné le match!\n",cli2->uid);
+  } else if (res2 == res1){
+    strcat(multi_push, "Egalité!\n");
+  }
+  write(cli1->connfd, multi_push, strlen(multi_push));
+  write(cli2->connfd, multi_push, strlen(multi_push));
+  memset(multi_push, 0, sizeof multi_push);
+  strcat(multi_push, "Retour au menu du jeu !\n");
+  write(cli1->connfd, multi_push, strlen(multi_push));
+  write(cli2->connfd, multi_push, strlen(multi_push));
   delToqueue(cli1->uid);
   delToqueue(cli2->uid);
+  return 0;
+  //connection_handler(cli1);
+  //connection_handler(cli2);
 }
 
 
 
 void *gameIA(void *client)
 {
-
-  //srand(time(NULL));
   clientOn *cli = (clientOn*)client;
   const char Mooves[3][15]={"Papier","Ciseaux","Pierre"};
   int choice, read_size, cx;
@@ -342,16 +408,13 @@ void *gameIA(void *client)
       strcat(push,"Pierre contre pierre, égalité!\n");
       tie++;
     }
-    printf("UN TOUR\n");
     write(cli->connfd , push , strlen(push));
     memset(push, 0, sizeof push);
 
   }
 
   memset(push, 0, sizeof push);
-  strcat(push,"Résultats :\n");
-  write(cli->connfd, push, strlen(push));
-  cx = snprintf(push, sizeof(push), "Victoire(s): %d \nDéfaite(s): %d\nNul(s): %d\n",win, lose, tie);
+  cx = snprintf(push, sizeof(push), "Résultats:\nVictoire(s): %d \nDéfaite(s): %d\nNul(s): %d\n",win, lose, tie);
   write(cli->connfd, push, strlen(push));
   memset(push, 0, sizeof push);
   if (win > lose) {
