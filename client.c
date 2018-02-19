@@ -91,7 +91,6 @@ int main(int argc , char *argv[])
     //memset (server_reply, 0, sizeof (server_reply));
 
 
-
     //Send some data
     // if( send(sock , message , strlen(message) , 0) < 0)
     // {
