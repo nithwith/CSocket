@@ -46,6 +46,7 @@ int inQueue[10];
 int nbInqueue = 0;
 
 
+
 int main(int argc , char *argv[])
 {
   system("clear");
@@ -104,7 +105,7 @@ int main(int argc , char *argv[])
       perror("could not create thread");
       return 1;
     }
-    free(cli);
+    //pthread_join( sniffer_thread , NULL);
   }
 
   if (client_sock < 0)
@@ -112,7 +113,6 @@ int main(int argc , char *argv[])
     perror("accept failed");
     return 1;
   }
-  close(client_sock);
   return 0;
 }
 
@@ -127,7 +127,7 @@ void *connection_handler(void *client)
   strcat(intro, "--- [1] Jouer contre l'IA ---\n");
   strcat(intro, "--- [2] Jouer contre un autre joueur ---\n");
   strcat(intro, "--- [3] Quitter ---\n");
-  write(cli->connfd , intro , strlen(intro));
+  send(cli->connfd , intro , strlen(intro), 0);
   while(bool == 0) {
     if ((read_size = recv(cli->connfd , client_message , 10 , 0)) > 0 ) {
       choice = atoi(client_message);
@@ -143,8 +143,10 @@ void *connection_handler(void *client)
         case 2:
         bool = 1;
         nbInqueue++;
+        printf("nbbqueueueu %d\n", nbInqueue);
         AddToQueue(cli->uid);
         if (nbInqueue == 2) {
+          nbInqueue = 0;
           int tb=0;
           while (clients[i]) {
             printf("room %d\n", clients[i]->currRoom);
@@ -156,6 +158,7 @@ void *connection_handler(void *client)
               ((Room*)clients[i]->currRoom)->open = 0;
               ((Room*)clients[i]->currRoom)->cli2 = cli;
               return 0;
+
             }
             i++;
           }
@@ -181,8 +184,8 @@ void *connection_handler(void *client)
         break;
         case 3:
         bool = 1;
-        DelClient(cli->connfd);
-        close(cli->connfd);
+        DelClient(cli->uid);
+        // close(cli->connfd);
         break;
         default:
         bool = 0;
@@ -190,7 +193,8 @@ void *connection_handler(void *client)
       }
     }
   }
-
+  close(cli->connfd);
+  //free(cli->connfd);
 }
 
 void *gameMulti(void *r) {
@@ -206,55 +210,73 @@ void *gameMulti(void *r) {
   memset(multi_push, 0, sizeof multi_push);
 
   for (game = 0; game < 3 ; game++) {
-
     strcat(multi_push,"Rentrez 1 pour Papier, 2 pour ciseaux, 3 pour pierre\n");
     write(cli1->connfd , multi_push , strlen(multi_push));
     write(cli2->connfd , multi_push , strlen(multi_push));
     memset(multi_push, 0, sizeof multi_push);
-    while(bool == 0) {
-      if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
-        choice1 = atoi(message1);
-        if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
-          bool = 1;
-        } else {
-          strcat(multi_push,"Choix inconnu, rééssayez:\n");
-          write(cli1->connfd , multi_push , strlen(multi_push));
-          memset(multi_push, 0, sizeof multi_push);
-        }
-      }
-      if ((read_size = recv(cli2->connfd ,message2 , 10 , 0)) > 0 ){
-        choice2 = atoi(message2);
-        if (choice2 == 1 || choice2 == 2 || choice2 == 3 ) {
-          bool = 1;
-        } else {
-          strcat(multi_push,"Choix inconnu, rééssayez:\n");
-          write(cli2->connfd , multi_push , strlen(multi_push));
-          memset(multi_push, 0, sizeof multi_push);
-        }
-      }
+
+    while (choice1 || choice2) {
+      
+      // if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
+      //   choice1 = atoi(message1);
+      //   if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
+      //     snprintf(multi_push, sizeof(multi_push), "En attente de joueur %d\n", cli2->uid);
+      //     write(cli1->connfd , multi_push , strlen(multi_push));
+      //     memset(multi_push, 0, sizeof multi_push);
+      //     bool = 1;
+      //   } else {
+      //     strcat(multi_push,"Choix inconnu, rééssayez:\n");
+      //     write(cli1->connfd , multi_push , strlen(multi_push));
+      //     memset(multi_push, 0, sizeof multi_push);
+      //     choice1 = NULL;
+      //   }
+      // }
+
     }
-
+    // while(bool == 0) {
+    //   if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
+    //     choice1 = atoi(message1);
+    //     if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
+    //       bool = 1;
+    //     } else {
+    //       strcat(multi_push,"Choix inconnu, rééssayez:\n");
+    //       write(cli1->connfd , multi_push , strlen(multi_push));
+    //       memset(multi_push, 0, sizeof multi_push);
+    //     }
+    //   }
+    //   if ((read_size = recv(cli2->connfd ,message2 , 10 , 0)) > 0 ){
+    //     choice2 = atoi(message2);
+    //     if (choice2 == 1 || choice2 == 2 || choice2 == 3 ) {
+    //       bool = 1;
+    //     } else {
+    //       strcat(multi_push,"Choix inconnu, rééssayez:\n");
+    //       write(cli2->connfd , multi_push , strlen(multi_push));
+    //       memset(multi_push, 0, sizeof multi_push);
+    //     }
+    //   }
+    // }
   }
-
-
-
-
+  delToqueue(cli1->uid);
+  delToqueue(cli2->uid);
 }
+
+
 
 void *gameIA(void *client)
 {
+
   //srand(time(NULL));
   clientOn *cli = (clientOn*)client;
   const char Mooves[3][15]={"Papier","Ciseaux","Pierre"};
   int choice, read_size, cx;
   char push[255];
   char client_message[1];
-  int ai;
   int win = 0;
   int tie = 0;
   int lose = 0;
   int game = 0;
   int bool = 0;
+  int ai;
 
   for(game = 0 ; game < 3 ; game++) {
     bool = 0;
@@ -277,45 +299,46 @@ void *gameIA(void *client)
     }
     cx = snprintf(push, sizeof(push), "[VOUS]: %s \n", Mooves[choice - 1]);
     write(cli->connfd , push , strlen(push));
-    cx = snprintf(push, sizeof(push), "[IA]: %s \n", Mooves[ai - 1]);
+    cx = snprintf(push, sizeof(push), "[IA]: %s \n", Mooves[ai]);
     write(cli->connfd , push , strlen(push));
     memset(push, 0, sizeof push);
-    if(choice == 1 && ai == 1){
+    if(choice == 1 && ai == 0){
       strcat(push, "Papier contre papier, égalité!\n");
       tie++;
     }
-    else if(choice ==1 && ai== 2){
+    else if(choice ==1 && ai== 1){
       strcat(push,"Papier contre ciseaux, perdu...\n");
       lose++;
     }
-    else if(choice == 1 && ai == 3){
+    else if(choice == 1 && ai == 2){
       strcat(push,"Papier contre pierre, victoire !\n");
       win++;
     }
-    else if(choice == 2 && ai == 1){
+    else if(choice == 2 && ai == 0){
       strcat(push, "Ciseaux contre papier, victoire !\n");
       win++;
     }
-    else if(choice == 2 && ai == 2){
+    else if(choice == 2 && ai == 1){
       strcat(push,"Ciseaux contre ciseaux, égalité!\n");
       tie++;
     }
-    else if(choice == 2 && ai == 3){
+    else if(choice == 2 && ai == 2){
       strcat(push,"Ciseaux contre pierre, perdu...\n");
       lose++;
     }
-    else if( choice == 3 && ai == 1){
+    else if( choice == 3 && ai == 0){
       strcat(push,"Pierre contre papier, perdu...\n");
       lose++;
     }
-    else if( choice == 3 && ai == 2){
+    else if( choice == 3 && ai == 1){
       strcat(push, "Pierre contre ciseaux, victoire !\n");
       win++;
     }
-    else if(choice == 3 && ai == 3){
+    else if(choice == 3 && ai == 2){
       strcat(push,"Pierre contre pierre, égalité!\n");
       tie++;
     }
+    printf("UN TOUR\n");
     write(cli->connfd , push , strlen(push));
     memset(push, 0, sizeof push);
 
@@ -334,11 +357,13 @@ void *gameIA(void *client)
   } else {
     strcat(push, "C'est un match nul !\n");
   }
+  write(cli->connfd, push, strlen(push));
+  memset(push, 0, sizeof push);
+  bool = 0;
   strcat(push, "Voulez vous rejouer?(1 pour Non/ 2 pour Oui) \n");
   write(cli->connfd, push, strlen(push));
-  bool = 0;
   while (bool == 0) {
-    if ((read_size = recv(cli->connfd, client_message , 10 , 0)) > 0 ) {
+    if ((recv(cli->connfd, client_message , 10 , 0)) > 0 ) {
       choice = atoi(client_message);
       if(choice == 1 || choice == 2) {
         switch (choice) {
@@ -349,7 +374,7 @@ void *gameIA(void *client)
           break;
           case 2:
           bool = 1;
-          *gameIA(cli);
+          gameIA(cli);
           return NULL;
           break;
           default:
@@ -379,11 +404,20 @@ void AddToQueue(int c){
   inQueue[i] = c;
 }
 
+void delToqueue(int c){
+  int i = 0;
+  while (inQueue[i] != c) {
+    i++;
+  }
+  inQueue[i] = NULL;
+}
+
 void DelClient(int id){
   int i=0;
   while(clients[i]->uid != id){
     i++;
   }
+  close(clients[i]->connfd);
   free(clients[i]);
   clients[i] = NULL;
 }
