@@ -19,14 +19,16 @@ roue-> skate-> velo-> voiture-> avion-> fusée
 */
 
 typedef struct client{
-  struct sockaddr_in addr;	/* Client remote address */
+  struct sockaddr_in addr;	/* Client
+
+   remote address */
   int connfd;			/* Connection file descriptor */
   int uid;			/* Client unique identifier */
   char name[32];			/* Client name */
   struct roomer *currRoom;
 } clientOn;
 
-typedef struct Roomer{
+typedef struct roomer{
   struct client *cli1, *cli2;			/*  */
   int open;
   //struct Roomer *YouCanOpenTheDoor;			/*  */
@@ -65,7 +67,7 @@ int main(int argc , char *argv[])
   for (int i = 0; i < 10; i++)
   {
     clients[i] = NULL;
-    inQueue[i] = NULL;
+    inQueue[i] = 0;
   }
 
   //Create socket
@@ -127,7 +129,7 @@ int main(int argc , char *argv[])
 void *connection_handler(void *client)
 {
   clientOn *cli = (clientOn*)client;
-  char Fullmsg[4000],client_message[2000],intro[255], push[255];
+  char Fullmsg[4000],client_message[2000],intro[500], push[500];
   int choice, read_size, bool = 0, ok = 0, i =0;
   strcat(intro,"Welcome to CSJANKEN\n");
   strcat(intro, "------[MENU]------\n");
@@ -155,12 +157,11 @@ void *connection_handler(void *client)
           nbInqueue = 0;
           int tb=0;
           while (clients[i]) {
-            printf("room %d\n", clients[i]->currRoom);
             if((clients[i]->uid != cli->uid) && (clients[i]->currRoom != 0 && ((Room*)clients[i]->currRoom)->open == 1)) {
               snprintf(push, sizeof(push), "Joueur %d seul , rejoignons le\n",clients[i]->uid);
               write(cli->connfd, push , strlen(push));
               memset(push, 0 , sizeof push);
-              cli->currRoom = (Room*)clients[i]->currRoom;
+              cli->currRoom = ((struct roomer*)clients[i]->currRoom);
               ((Room*)clients[i]->currRoom)->open = 0;
               ((Room*)clients[i]->currRoom)->cli2 = cli;
               return 0;
@@ -173,20 +174,13 @@ void *connection_handler(void *client)
           write(cli->connfd, push , strlen(push));
           memset(push, 0 , sizeof push);
           printf("Création d'une room\n" );
-          Room *temp;
-          printf("avant malloc\n" );
+          struct roomer *temp;
           temp = malloc(sizeof(Room*));
-          printf("apres malloc\n" );
           temp->open = 1;
-          printf("apres malloc\n" );
           temp->cli1 = cli;
-          printf("apres malloc\n" );
           cli->currRoom = temp;
-          printf("apres malloc\n" );
           while(1) {
             if (((Room*)cli->currRoom)->cli2 != 0) {
-
-              printf("apres malloc\n" );
               //Lancement du jeu multi
               gameMulti(cli->currRoom);
               return 0;
@@ -213,9 +207,10 @@ void *connection_handler(void *client)
   close(cli->connfd);
   //free(cli->connfd);
 }
+
 void *askChoice(void *client)
 {
-  char multi_push[255], message[1];
+  char multi_push[500], message[1];
   clientOn *cli = (clientOn*)client;
   int bool = 0 , choice1;
   strcat(multi_push,"Rentrez 1 pour Papier, 2 pour ciseaux, 3 pour pierre\n");
@@ -354,7 +349,7 @@ void *gameIA(void *client)
   clientOn *cli = (clientOn*)client;
   const char Mooves[3][15]={"Papier","Ciseaux","Pierre"};
   int choice, read_size, cx;
-  char push[255];
+  char push[500];
   char client_message[1];
   int win = 0;
   int tie = 0;
@@ -447,18 +442,18 @@ void *gameIA(void *client)
   while (bool == 0) {
     if ((recv(cli->connfd, client_message , 10 , 0)) > 0 ) {
       choice = atoi(client_message);
-      if(choice == 1 || choice == 2) {
+      if(choice == 15 || choice == 25) {
 
         //strcat(push,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
         //write(cli->connfd , push , strlen(push));
 
         switch (choice) {
-          case 1:
+          case 15:
             bool = 1;
             *connection_handler(cli);
             return NULL;
             break;
-          case 2:
+          case 25:
             bool = 1;
             gameIA(cli);
             return NULL;
@@ -495,7 +490,7 @@ void delToqueue(int c){
   while (inQueue[i] != c) {
     i++;
   }
-  inQueue[i] = NULL;
+  inQueue[i] = 0;
 }
 
 void DelClient(int id){
