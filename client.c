@@ -46,10 +46,15 @@ int main(int argc , char *argv[])
   }
   printf("%s\n", server_reply);
 
-  //Lancement du jeu
+    //Lancement du jeu
     while(1)
     {
-      char message[1000] , server_reply[2000];
+      char message[1000];
+      char server_reply[2000];
+
+      //Vider les tableaux en attente de la boucle suivante
+      memset (message, 0, sizeof (message));
+      memset (server_reply, 0, sizeof (server_reply));
 
       printf("Enter votre choix : ");
       scanf("%s" , message);
@@ -68,15 +73,15 @@ int main(int argc , char *argv[])
           break;
       }
 
+      //SIGNAL CLOSE
+      int choice = atoi(server_reply);
+      if(choice == 10){
+        printf("Fermeture....\n" );
+        break;
+      }
+
       puts(server_reply);
     }
-
-  while (1) {
-    if (recv(sock , server_reply , sizeof(server_reply), 0) < 0) {
-      printf("Receive failed");
-    }
-    printf("%s\n", server_reply);
-  }
   close(sock);
   return 0;
 }
