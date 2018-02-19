@@ -40,6 +40,7 @@ void *gameMulti(void *Room);
 void AddClient(clientOn *c);//AJoute le client au groupe de client connecter
 void AddToQueue(int c);//AJoute le client au groupe de client en queue
 void DelClient(int);
+void delToqueue(int c);
 //Initialise le tab de clients connectés
 clientOn *clients[10];
 int inQueue[10];
@@ -198,63 +199,66 @@ void *connection_handler(void *client)
 }
 
 void *gameMulti(void *r) {
+
+  const char Mooves[3][15]={"Papier","Ciseaux","Pierre"};
+  pthread_t tid1, tid2;
   Room *room = (Room*)r;
   char multi_push[255], message1[1], message2[1];
-  int game, win1, win2, tie, lose1, lose2, choice1, choice2, read_size, bool =0;
+  int game, win1, win2, tie, lose1, lose2, choice1, choice2, read_size, bool1 = 0, bool2 = 0;
   clientOn *cli1 = room->cli1;
   clientOn *cli2 = room->cli2;
   strcat(multi_push, "------ [MODE MULTI] ------\n");
+  write(cli1->connfd, multi_push, strlen(multi_push));
+  write(cli2->connfd, multi_push, strlen(multi_push));
   snprintf(multi_push, sizeof(multi_push), "Joueur %d VERSUS Joueur %d\n", cli1->uid, cli2->uid);
   write(cli1->connfd, multi_push, strlen(multi_push));
   write(cli2->connfd, multi_push, strlen(multi_push));
   memset(multi_push, 0, sizeof multi_push);
 
   for (game = 0; game < 3 ; game++) {
+    choice1 = 0;
+    choice2 = 0;
+    bool1 = 0;
+    bool2 = 0;
     strcat(multi_push,"Rentrez 1 pour Papier, 2 pour ciseaux, 3 pour pierre\n");
     write(cli1->connfd , multi_push , strlen(multi_push));
     write(cli2->connfd , multi_push , strlen(multi_push));
     memset(multi_push, 0, sizeof multi_push);
-
-    while (choice1 || choice2) {
-      
-      // if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
-      //   choice1 = atoi(message1);
-      //   if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
-      //     snprintf(multi_push, sizeof(multi_push), "En attente de joueur %d\n", cli2->uid);
-      //     write(cli1->connfd , multi_push , strlen(multi_push));
-      //     memset(multi_push, 0, sizeof multi_push);
-      //     bool = 1;
-      //   } else {
-      //     strcat(multi_push,"Choix inconnu, rééssayez:\n");
-      //     write(cli1->connfd , multi_push , strlen(multi_push));
-      //     memset(multi_push, 0, sizeof multi_push);
-      //     choice1 = NULL;
-      //   }
-      // }
-
+    while(bool1 == 0 && bool2 == 0){
+      if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
+        choice1 = atoi(message1);
+        if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
+          printf("joeur 1 a joué %d\n", choice1);
+          bool1 = 1;
+        } else {
+          strcat(multi_push,"Choix inconnu, rééssayez:\n");
+          write(cli1->connfd , multi_push , strlen(multi_push));
+          memset(multi_push, 0, sizeof multi_push);
+        }
+      }
+      if ((read_size = recv(cli2->connfd ,message2 , 10 , 0)) > 0 ){
+        choice2 = atoi(message2);
+        if (choice2 == 1 || choice2 == 2 || choice2 == 3 ) {
+          printf("joeur 2 a joué %d\n", choice2);
+          bool2 = 1;
+        } else {
+          strcat(multi_push,"Choix inconnu, rééssayez:\n");
+          write(cli2->connfd , multi_push , strlen(multi_push));
+          memset(multi_push, 0, sizeof multi_push);
+        }
+      }
     }
-    // while(bool == 0) {
-    //   if ((read_size = recv(cli1->connfd ,message1 , 10 , 0)) > 0 ){
-    //     choice1 = atoi(message1);
-    //     if (choice1 == 1 || choice1 == 2 || choice1 == 3 ) {
-    //       bool = 1;
-    //     } else {
-    //       strcat(multi_push,"Choix inconnu, rééssayez:\n");
-    //       write(cli1->connfd , multi_push , strlen(multi_push));
-    //       memset(multi_push, 0, sizeof multi_push);
-    //     }
-    //   }
-    //   if ((read_size = recv(cli2->connfd ,message2 , 10 , 0)) > 0 ){
-    //     choice2 = atoi(message2);
-    //     if (choice2 == 1 || choice2 == 2 || choice2 == 3 ) {
-    //       bool = 1;
-    //     } else {
-    //       strcat(multi_push,"Choix inconnu, rééssayez:\n");
-    //       write(cli2->connfd , multi_push , strlen(multi_push));
-    //       memset(multi_push, 0, sizeof multi_push);
-    //     }
-    //   }
-    // }
+
+    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[choice1 - 1]);
+    write(cli1->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[VOUS]: %s \n", Mooves[choice2 - 1]);
+    write(cli2->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[choice2 - 1]);
+    write(cli1->connfd , multi_push , strlen(multi_push));
+    snprintf(multi_push, sizeof(multi_push), "[AUTRE JOUEUR]: %s \n", Mooves[choice1 - 1]);
+    write(cli2->connfd , multi_push , strlen(multi_push));
+    memset(multi_push, 0, sizeof multi_push);
+
   }
   delToqueue(cli1->uid);
   delToqueue(cli2->uid);
