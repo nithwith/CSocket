@@ -439,9 +439,9 @@ void *gameIA(void *client)
       choice = atoi(client_message);
       if(choice == 1 || choice == 2) {
 
-        strcat(push,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-        write(cli->connfd , push , strlen(push));
-        
+        //strcat(push,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+        //write(cli->connfd , push , strlen(push));
+
         switch (choice) {
           case 1:
             bool = 1;

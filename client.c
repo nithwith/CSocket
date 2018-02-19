@@ -49,7 +49,12 @@ int main(int argc , char *argv[])
     //Lancement du jeu
     while(1)
     {
-      char message[1000] , message2[1000], server_reply[2000];
+      char message[1000];
+      char server_reply[2000];
+
+      //Vider les tableaux en attente de la boucle suivante
+      memset (message, 0, sizeof (message));
+      memset (server_reply, 0, sizeof (server_reply));
 
       printf("Enter votre choix : ");
       scanf("%s" , message);
